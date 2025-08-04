@@ -1,1 +1,1 @@
-Error: No se encontraron noticias completas - Revisar selectores
+Error: Revisar selectores - estructura del sitio cambiada
