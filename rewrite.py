@@ -1,32 +1,36 @@
-def improve_news(text):
-    if "⚠️" in text or "⛔" in text:
-        return text  # No procesar mensajes de error
-    
-    # Simulador de mejoras (en producción usaría IA real)
-    improvements = [
-        "🔍 Análisis completo:",
-        "📰 Reportaje ampliado:",
-        "✨ Perspectiva mejorada:"
-    ]
-    
-    return (
-        f"{random.choice(improvements)}\n\n" +
-        text.replace("•", "➡") +  # Cambiar viñetas
-        "\n\n💡 Nota optimizada con tecnología"
-    )
+import openai
+import json
 
-if __name__ == "__main__":
-    import random
-    
+def improve_news(news_data, api_key):
     try:
-        with open("noticia_completa.txt", "r", encoding="utf-8") as f:
-            original = f.read()
+        openai.api_key = api_key
         
-        mejorada = improve_news(original)
+        prompt = f"""
+        Reescribe esta noticia de forma completamente original, manteniendo los hechos pero con:
+        - Estructura profesional
+        - Tono periodístico neutro
+        - Redacción 100% única (evita plagio)
+        - Incluye contexto relevante si es necesario
+
+        Datos originales:
+        Título: {news_data['title']}
+        Contenido: {news_data['content']}
+
+        Devuelve SOLO un JSON con:
+        {{
+            "new_title": "Título mejorado",
+            "new_content": "Texto reescrito"
+        }}
+        """
         
-        with open("noticia_mejorada.txt", "w", encoding="utf-8") as f:
-            f.write(mejorada)
-            
+        response = openai.ChatCompletion.create(
+            model="gpt-4-turbo",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0.7  # Balance entre creatividad y precisión
+        )
+        
+        return json.loads(response.choices[0].message.content)
+    
     except Exception as e:
-        with open("noticia_mejorada.txt", "w", encoding="utf-8") as f:
-            f.write(f"Error al mejorar la noticia: {str(e)}")
+        print(f"⛔ Error en IA: {e}")
+        return None
