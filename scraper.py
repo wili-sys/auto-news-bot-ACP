@@ -1,68 +1,111 @@
 import requests
 from bs4 import BeautifulSoup
-import re
+import random
+import time
 
-def scrape_alcalor_actualizado():
-    url = "https://www.alcalorpolitico.com/edicion/inicio.html"
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+def get_random_headers():
+    user_agents = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/115.0'
+    ]
+    return {
+        'User-Agent': random.choice(user_agents),
         'Accept-Language': 'es-MX,es;q=0.9',
-        'Referer': 'https://www.google.com/'
+        'Referer': 'https://www.google.com/',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'DNT': '1'
     }
+
+def scrape_alcalor_politico():
+    url = "https://www.alcalorpolitico.com/edicion/inicio.html"
     
     try:
-        # 1. Descargar el HTML
-        response = requests.get(url, headers=headers, timeout=25)
-        response.raise_for_status()
-        
-        # 2. Analizar con BeautifulSoup
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # 3. Extracción AGRESIVA (para superar cambios de estructura)
-        resultados = []
-        
-        # Patrón para identificar noticias
-        patron_noticias = re.compile(r'noticia|articulo|post|card|contenido', re.I)
-        
-        # Buscar en TODOS los contenedores posibles
-        for contenedor in soup.find_all(['article', 'div', 'section'], class_=patron_noticias):
-            # Extraer título de cualquier etiqueta h2-h4
-            titulo = contenedor.find(['h2', 'h3', 'h4'])
-            if not titulo:
-                continue
+        # Intentar con diferentes configuraciones
+        for attempt in range(3):
+            try:
+                # Espera aleatoria entre intentos
+                if attempt > 0:
+                    time.sleep(random.uniform(2, 5))
                 
-            # Extraer contenido (todos los párrafos)
-            contenido = []
-            for p in contenedor.find_all('p', recursive=True):
-                texto = p.get_text(strip=True)
-                if len(texto) > 20:  # Filtrar textos cortos
-                    contenido.append(texto)
-            
-            # Si no hay párrafos, extraer todo el texto
-            if not contenido:
-                texto_completo = contenedor.get_text(' ', strip=True)
-                contenido = [texto_completo[:300] + "..."]  # Limitar longitud
-            
-            # Formatear resultado
-            resultado = (
-                f"🚀 TÍTULO: {titulo.get_text(strip=True)}\n"
-                f"📌 CONTENIDO:\n" + 
-                "\n".join(f"• {p}" for p in contenido[:3]) +  # Mostrar primeros 3 párrafos
-                "\n🔗 Fuente: Al Calor Político\n" +
-                "―"*50
-            )
-            resultados.append(resultado)
-            
-            # Limitar a 5 noticias para prueba
-            if len(resultados) >= 5:
-                break
+                response = requests.get(
+                    url,
+                    headers=get_random_headers(),
+                    timeout=15,
+                    cookies={'cookie_consent': 'true'}
+                )
+                response.raise_for_status()
+                
+                soup = BeautifulSoup(response.text, 'html.parser')
+                
+                # Extracción mejorada con múltiples estrategias
+                news_items = []
+                
+                # Estrategia 1: Buscar artículos con estructura común
+                articles = soup.find_all('article', limit=5) or soup.find_all('div', class_=lambda x: x and 'noticia' in x.lower(), limit=5)
+                
+                for article in articles:
+                    # Extraer título
+                    title = article.find(['h2', 'h3', 'h4']) or article.find(attrs={'itemprop': 'headline'})
+                    if not title:
+                        continue
+                    
+                    # Extraer contenido
+                    content = []
+                    # Buscar párrafos principales
+                    paragraphs = article.find_all('p', limit=3) or [article]
+                    for p in paragraphs:
+                        text = p.get_text(' ', strip=True)
+                        if len(text.split()) > 5:  # Filtrar textos muy cortos
+                            content.append(text)
+                    
+                    # Si no hay contenido, usar texto completo
+                    if not content:
+                        full_text = article.get_text(' ', strip=True)
+                        content = [' '.join(full_text.split()[:50]) + '...']
+                    
+                    # Formatear resultado
+                    news_item = (
+                        f"📌 TÍTULO: {title.get_text(strip=True)}\n"
+                        f"📝 CONTENIDO:\n" + 
+                        "\n".join(f"• {p}" for p in content) +
+                        "\n―――――――――――――――――――――――――――――――――――――――"
+                    )
+                    news_items.append(news_item)
+                
+                if news_items:
+                    return news_items
+                
+            except Exception as e:
+                if attempt == 2:  # Último intento
+                    raise e
+                continue
         
-        return resultados if resultados else ["⚠️ Error: Usa VPN o revisa manualmente el sitio"]
-
+        # Si todo falla, usar API de respaldo
+        return get_news_backup()
+        
     except Exception as e:
-        return [f"⛔ Error técnico: {str(e)}"]
+        return [f"⚠️ No se pudieron obtener noticias. Razón: {str(e)}"]
+
+def get_news_backup():
+    """Alternativa usando NewsAPI si el scraping falla"""
+    try:
+        # Esto es un ejemplo - necesitarías una API key real
+        api_key = "TU_API_KEY"  # Obtén una gratis en newsapi.org
+        url = f"https://newsapi.org/v2/top-headlines?country=mx&apiKey={api_key}"
+        response = requests.get(url).json()
+        
+        return [
+            f"📰 {article['title']}\n"
+            f"📝 {article.get('description', 'Descripción no disponible')}\n"
+            f"🔗 {article['url']}\n"
+            "―――――――――――――――――――――――――――――――――――――――"
+            for article in response.get('articles', [])[:3]
+        ]
+    except:
+        return ["📢 No se pudieron cargar noticias. Por favor intente más tarde."]
 
 if __name__ == "__main__":
-    noticias = scrape_alcalor_actualizado()
+    news = scrape_alcalor_politico()
     with open("noticias.txt", "w", encoding="utf-8") as f:
-        f.write("\n\n".join(noticias))
+        f.write("\n\n".join(news))
