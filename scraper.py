@@ -2,18 +2,21 @@ import requests
 from bs4 import BeautifulSoup
 
 def scrape_news():
-    url = "https://www.bbc.com/mundo"  # Cambia al sitio que quieras scrapear
-    response = requests.get(url)
-    soup = BeautifulSoup(response.text, 'html.parser')
-    headlines = soup.find_all('h3')  # Ajusta según la estructura del sitio
-    
-    news_list = []
-    for headline in headlines[:5]:  # Solo las primeras 5 noticias
-        title = headline.text.strip()
-        if title and len(title) > 10:
-            news_list.append(title)
-    
-    return news_list
+    url = "https://www.alcalorpolitico.com/edicion/inicio.html"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Extrae titulares principales (h3 con clase específica)
+        headlines = soup.find_all('h3', class_=['titulo-noticia-principal', 'titulo-noticia-secundaria'])
+        news_list = [h.text.strip() for h in headlines if h.text.strip()]
+        
+        return news_list if news_list else ["No se encontraron noticias."]
+    except Exception as e:
+        return [f"Error al scrapear: {str(e)}"]
 
 if __name__ == "__main__":
     news = scrape_news()
