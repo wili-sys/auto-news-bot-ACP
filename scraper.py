@@ -1,45 +1,55 @@
 import requests
 from bs4 import BeautifulSoup
 
-def scrape_full_news():
+def scrape_alcalor_completo():
     url = "https://www.alcalorpolitico.com/edicion/inicio.html"
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept-Language': 'es-MX,es;q=0.9'
+        'Referer': 'https://www.alcalorpolitico.com'
     }
     
     try:
-        response = requests.get(url, headers=headers, timeout=15)
+        response = requests.get(url, headers=headers, timeout=20)
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        results = []
+        resultados = []
         
-        # Extraer noticias principales (ajustado para Al Calor Político)
-        news_cards = soup.select('div.noticia') or soup.select('article.noticia') or soup.select('div.card-noticia')
+        # 1. Extraer noticias principales (selectores actualizados agosto 2024)
+        articulos = soup.select('div.noticia-principal, div.noticia-secundaria, article.card')
         
-        for card in news_cards[:3]:  # Limitar a 3 noticias para prueba
-            title = card.select_one('h2, h3, h4')
-            content = card.select_one('p.bajada, p.resumen, div.contenido')
+        for articulo in articulos[:5]:  # Limitar a 5 noticias para prueba
+            # Extraer título
+            titulo = articulo.select_one('h2.titulo, h3.titulo, h2.card-title, h3.card-title')
             
-            if title:
-                news_entry = f"TÍTULO: {title.text.strip()}\n"
-                if content:
-                    news_entry += f"CONTENIDO: {content.text.strip()}\n"
-                else:
-                    # Plan B: Extraer primer párrafo cercano
-                    next_p = card.find_next('p')
-                    if next_p:
-                        news_entry += f"CONTENIDO: {next_p.text.strip()}\n"
+            if titulo:
+                noticia = {
+                    'titulo': titulo.text.strip(),
+                    'contenido': []
+                }
                 
-                news_entry += "────────────────────"
-                results.append(news_entry)
+                # Extraer contenido (párrafos)
+                contenido = articulo.select('p:not([class]), p.contenido, p.card-text')
+                for p in contenido[:3]:  # Primeros 3 párrafos
+                    if p.text.strip():
+                        noticia['contenido'].append(p.text.strip())
+                
+                if noticia['contenido']:
+                    # Plan B: Extraer texto cercano
+                    texto = articulo.get_text(separator=' ', strip=True)
+                    noticia['contenido'] = [' '.join(texto.split()[:50]) + '...']  # Limitar a 50 palabras
+                
+                # Formatear resultado
+                resultado = f"TÍTULO: {noticia['titulo']}\n"
+                resultado += "CONTENIDO:\n" + "\n".join(f"- {p}" for p in noticia['contenido'])
+                resultado += "\n────────────────────"
+                resultados.append(resultado)
         
-        return results if results else ["Error: No se encontraron noticias completas - Revisar selectores"]
+        return resultados if resultados else ["Error: Revisar selectores - estructura del sitio cambiada"]
 
     except Exception as e:
-        return [f"Error técnico: {str(e)}"]
+        return [f"Error de conexión: {str(e)}"]
 
 if __name__ == "__main__":
-    news = scrape_full_news()
+    noticias = scrape_alcalor_completo()
     with open("noticias.txt", "w", encoding="utf-8") as f:
-        f.write("\n\n".join(news))
+        f.write("\n\n".join(noticias))
