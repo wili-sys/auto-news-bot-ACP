@@ -14,34 +14,43 @@ def scrape_alcalor():
         soup = BeautifulSoup(response.text, 'html.parser')
         
         resultados = []
-        noticias = soup.find_all('article')  # Busca elementos <article> (donde suelen estar las noticias)
         
-        for noticia in noticias[:10]:  # Limita a 10 noticias para prueba
-            titulo = noticia.find(['h2', 'h3'])
+        # Estrategia 1: Buscar contenedores de noticias por clase común
+        contenedores = soup.find_all(class_=lambda x: x and ('noticia' in x or 'articulo' in x or 'post' in x or 'card' in x))
+        
+        # Estrategia 2: Si falla, buscar por estructura semántica
+        if not contenedores:
+            contenedores = soup.find_all(['article', 'section', 'div'], limit=20)
+        
+        for cont in contenedores[:15]:  # Limitar a 15 elementos para prueba
+            # Extraer título (h1-h4)
+            titulo = cont.find(['h1', 'h2', 'h3', 'h4'])
             if not titulo:
                 continue
                 
+            # Extraer contenido (párrafos)
             contenido = []
-            # Extrae párrafos de la noticia (ajusta según la estructura real)
-            for p in noticia.find_all('p', class_=lambda x: x and 'bajada' not in x):
+            for p in cont.find_all('p'):
                 texto = p.get_text(strip=True)
-                if len(texto) > 20:  # Filtra textos cortos
+                if len(texto.split()) > 5:  # Filtrar textos muy cortos
                     contenido.append(f"• {texto}")
             
+            # Si no hay párrafos, extraer texto completo
             if not contenido:
-                contenido = ["• Contenido no disponible (ver enlace original)"]
+                texto_completo = ' '.join(cont.get_text(' ', strip=True).split()[:100]) + "..."
+                contenido = [f"• {texto_completo}"]
             
-            # Formato de salida
+            # Formatear resultado
             resultados.append(
                 f"📌 {titulo.get_text(strip=True)}\n" +
-                "\n".join(contenido) +
+                "\n".join(contenido[:3]) +  # Mostrar solo primeros 3 párrafos
                 "\n══════════════════════════════════════════════════\n"
             )
         
-        return resultados if resultados else ["⚠️ No se encontraron noticias con el formato esperado"]
-
+        return resultados if resultados else ["⚠️ Sitio bloqueó el acceso o cambió su estructura"]
+    
     except Exception as e:
-        return [f"⛔ Error técnico: {str(e)}"]
+        return [f"⛔ Error de conexión: {str(e)}"]
 
 if __name__ == "__main__":
     noticias = scrape_alcalor()
