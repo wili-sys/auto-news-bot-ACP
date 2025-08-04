@@ -1,20 +1,14 @@
-name: Scrape and Rewrite News
+name: Scrape Al Calor Político
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '*/30 * * * *'  # Cada 30 minutos
   workflow_dispatch:
 
-# Añade esto:
-permissions:
-  contents: write  # Permite hacer push al repositorio
-
 jobs:
-  scrape-and-rewrite:
+  scrape:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}  # Token automático de GitHub
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
