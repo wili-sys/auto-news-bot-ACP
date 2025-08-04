@@ -1,27 +1,25 @@
-# rewrite.py
-import random
-
 def improve_news(text):
     if "⚠️" in text or "⛔" in text:
-        return text  # No reescribir mensajes de error
+        return text  # No procesar mensajes de error
     
-    # Simulador de IA (para producción usar una API real)
+    # Simulador de mejoras (en producción usaría IA real)
     improvements = [
-        "Análisis:",
-        "Contexto ampliado:",
-        "Nuevos detalles:",
-        "Perspectiva:"
+        "🔍 Análisis completo:",
+        "📰 Reportaje ampliado:",
+        "✨ Perspectiva mejorada:"
     ]
     
     return (
         f"{random.choice(improvements)}\n\n" +
-        text.replace("•", "→") +  # Cambiar viñetas
-        "\n\n💡 Nota mejorada con IA"
+        text.replace("•", "➡") +  # Cambiar viñetas
+        "\n\n💡 Nota optimizada con tecnología"
     )
 
 if __name__ == "__main__":
+    import random
+    
     try:
-        with open("noticia.txt", "r", encoding="utf-8") as f:
+        with open("noticia_completa.txt", "r", encoding="utf-8") as f:
             original = f.read()
         
         mejorada = improve_news(original)
