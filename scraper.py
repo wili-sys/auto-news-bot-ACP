@@ -1,4 +1,4 @@
- import requests
+import requests
 from bs4 import BeautifulSoup
 import re
 
@@ -15,33 +15,31 @@ def scrape_full_news():
         
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # 1. Encontrar el contenedor principal de la noticia
+        # 1. Buscar contenedor principal
         news_container = soup.find('article') or soup.find('div', class_=re.compile(r'noticia|articulo|post|card|principal', re.I))
         
         if not news_container:
             return "⚠️ No se pudo encontrar el contenedor de noticias"
         
-        # 2. Extraer el título completo
+        # 2. Extraer título
         title = news_container.find(['h1', 'h2', 'h3', 'h4']) or "Noticia de Al Calor Político"
         title_text = title.get_text(strip=True)
         
-        # 3. Extraer TODOS los párrafos relevantes
+        # 3. Extraer contenido completo
         content = []
         paragraphs = news_container.find_all('p')
         
         for p in paragraphs:
             text = p.get_text(' ', strip=True)
-            if len(text.split()) > 3:  # Filtrar textos muy cortos
-                # Limpiar texto de espacios múltiples
+            if len(text.split()) > 3:
                 clean_text = ' '.join(text.split())
                 content.append(f"• {clean_text}")
         
-        # 4. Si no hay párrafos, extraer todo el texto del contenedor
         if not content:
             full_text = ' '.join(news_container.get_text(' ', strip=True).split())
             content = [f"• {full_text}"]
         
-        # 5. Formatear la salida completa
+        # 4. Formatear salida
         news_output = (
             f"📌 {title_text}\n\n" +
             "\n".join(content) +
@@ -51,7 +49,7 @@ def scrape_full_news():
         return news_output
         
     except Exception as e:
-        return f"⛔ Error al obtener la noticia completa: {str(e)}"
+        return f"⛔ Error: {str(e)}"
 
 if __name__ == "__main__":
     noticia_completa = scrape_full_news()
